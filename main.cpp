@@ -12,6 +12,7 @@ const int consoleCapacity = 80;//максимальне число символ�
 long maxCounter = 1;//максимальна кількість файлів, що потрапляла у проміжок
 
 void scanAllFilesInDirectory(const string &path) {
+    //функція сканує всі файли за даним шляхом та записує їх у мапу
     for (const auto &dirIterator: filesystem::recursive_directory_iterator(path)) {
         /*recursive_directory_iterator — це LegacyInputIterator, який виконує ітерацію
          * над елементами directory_entry каталогу і, рекурсивно, над записами всіх підкаталогів.
@@ -27,7 +28,7 @@ void scanAllFilesInDirectory(const string &path) {
 
 string getRange(int value);
 
-void mappingFilesToRangeOfSize() {
+void countSizeToRange() {//функція для підрахунку кількості файлів, що належать кожному проміжку
     for (const auto &file: files) {//проходимося по всіх файлах
         int size = file.second;//розмір
         string key = getRange(size); //обраховуємо проміжок якому він належить - це і є ключ.
@@ -50,7 +51,7 @@ void printResult();
 int main() {
     string path = "C:\\Program Files\\Sublime Text 3";
     scanAllFilesInDirectory(path);
-    mappingFilesToRangeOfSize();
+    countSizeToRange();
     printResult();
     return 0;
 }
