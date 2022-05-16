@@ -27,38 +27,39 @@ void scanAllFilesInDirectory(const string &path) {
     //функція сканує всі файли за даним шляхом
     string directoryPath = path;
     directoryPath += "\\*"; // шлях до папки
-    CHAR *curDir = new CHAR[MAX_PATH]{'0'};
-    StringCchCopy(((STRSAFE_LPSTR) curDir), MAX_PATH, ((STRSAFE_LPSTR) directoryPath.c_str()));
+    CHAR *currentDirectory = new CHAR[MAX_PATH]{'0'};
+    StringCchCopy(((STRSAFE_LPSTR) currentDirectory), MAX_PATH, ((STRSAFE_LPSTR) directoryPath.c_str()));
     /*StringCchCopy - Копіює один рядок в інший.
      * Розмір буфера призначення надається функції,
      * щоб гарантувати, що вона не записує кінець цього буфера.*/
-    WIN32_FIND_DATAA file_data;
-    HANDLE h_file = FindFirstFileA(curDir, &file_data);
+    WIN32_FIND_DATAA file;/* WIN32_FIND_DATAA - Містить інформацію про файл,
+ * знайдений функцією FindFirstFile, FindFirstFileEx або FindNextFile.*/
+    HANDLE checkFile = FindFirstFileA(currentDirectory, &file);
     /*FindFirstFileA - Шукає в каталозі файл або підкаталог з іменем, яке відповідає певному імені
      * (або частковому імені, якщо використовуються символи підстановки).
      *
-     * Якщо функції не вдається або не вдається знайти файли з рядка пошуку в параметрі curDir,
-     * повертається значення INVALID_HANDLE_VALUE, а вміст file_data є невизначеним.*/
-    if (INVALID_HANDLE_VALUE == h_file) {
+     * Якщо функції не вдається або не вдається знайти файли з рядка пошуку в параметрі currentDirectory,
+     * повертається значення INVALID_HANDLE_VALUE, а вміст file є невизначеним.*/
+    if (INVALID_HANDLE_VALUE == checkFile) {
         cout << "Error in " << directoryPath << endl;
         return;
     }
     do {
-        if (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {//перевіряємо чи це папка
-            if (strcmp(file_data.cFileName, ".") &&
-                strcmp(file_data.cFileName, "..")) { // Пропускаємо папки "." та ".."
-                string next = path + '\\' + file_data.cFileName;  // створюємо шлях до папки
-                scanAllFilesInDirectory(next); //рекурсивно заходимо в неї
+        if (file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {//перевіряємо чи це папка
+            if (strcmp(file.cFileName, ".") &&
+                strcmp(file.cFileName, "..")) { // Пропускаємо папки "." та ".."
+                string nextFolder = path + '\\' + file.cFileName;  // створюємо шлях до папки
+                scanAllFilesInDirectory(nextFolder); //рекурсивно заходимо в неї
             }
         } else {//інакше це файл
-            countFile(file_data);//рахуємо в якому проміжку належить розмір файлу
+            countFile(file);//рахуємо в якому проміжку належить розмір файлу
         }
-    } while (FindNextFileA(h_file, &file_data) != 0);
+    } while (FindNextFileA(checkFile, &file) != 0);
     /* FindNextFileA - Продовжує пошук файлу
      * Якщо функція виконується успішно, повертається значення відмінне від нуля,
-     * а параметр lpFindFileData містить інформацію про наступний знайдений файл або каталог.
+     * а параметр file містить інформацію про наступний знайдений файл або каталог.
      * Якщо функція не працює, повертається значення дорівнює нулю,
-     * а вміст lpFindFileData є невизначеним.*/
+     * а вміст file є невизначеним.*/
 }
 
 
