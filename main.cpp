@@ -1,70 +1,80 @@
-#include <map>
 #include <iostream>
-#include <filesystem>
+#include <map>
 #include <string>
+#include <windows.h>
+#include <strsafe.h>
+#include <stdio.h>
+#include "vector"
 
+#define CONSOLE_CAPACITY 80//максимальне число символів для найбільшого результату гістограми
 using namespace std;
 
 const int interval = 1024 * 50;//інтервал
 map<string, int> statistic;//string - інтервал, int - лічильник файлів, що входять у цей інтервал
-map<string, int> files;//string - ім'я файлу, int - його розмір
-const int consoleCapacity = 80;//максимальне число символів для найбільшого результату гістограми
-long maxCounter = 1;//максимальна кількість файлів, що потрапляла у проміжок
+long maxCounter = 0;//максимальна кількість файлів, що потрапляла у проміжок
+
+int dwordToInt(DWORD high, DWORD low);
+
+void countSizeToRange(int size);
+
+void countFile(WIN32_FIND_DATAA file) {
+    int size = dwordToInt(file.nFileSizeHigh, file.nFileSizeLow);
+    countSizeToRange(size);
+}
 
 void scanAllFilesInDirectory(const string &path) {
-    //функція сканує всі файли за даним шляхом та записує їх у мапу
-    for (const auto &dirIterator: filesystem::recursive_directory_iterator(path)) {
-        /*recursive_directory_iterator — це LegacyInputIterator, який виконує ітерацію
-         * над елементами directory_entry каталогу і, рекурсивно, над записами всіх підкаталогів.
-         * Порядок ітерації не визначений, за винятком того, що кожен запис у каталозі відвідується лише один раз.*/
-        if (filesystem::is_regular_file(dirIterator)) {
-            /*true, якщо файл відноситься до звичайного файлу, інакше значення false.*/
-            string name = dirIterator.path().filename().string();// ім'я файлу
-            int size = dirIterator.file_size();//розмір файлу
-            files.insert(pair(name, size));//запам'ятовуємо
-        };
+    //функція сканує всі файли за даним шляхом
+    string directoryPath = path;
+    directoryPath += "\\*"; // шлях до папки
+    CHAR *curDir = new CHAR[MAX_PATH]{'0'};
+    StringCchCopy(((STRSAFE_LPSTR) curDir), MAX_PATH, ((STRSAFE_LPSTR) directoryPath.c_str()));
+    /*StringCchCopy - Копіює один рядок в інший.
+     * Розмір буфера призначення надається функції,
+     * щоб гарантувати, що вона не записує кінець цього буфера.*/
+    WIN32_FIND_DATAA file_data;
+    HANDLE h_file = FindFirstFileA(curDir, &file_data);
+    /*FindFirstFileA - Шукає в каталозі файл або підкаталог з іменем, яке відповідає певному імені
+     * (або частковому імені, якщо використовуються символи підстановки).
+     *
+     * Якщо функції не вдається або не вдається знайти файли з рядка пошуку в параметрі curDir,
+     * повертається значення INVALID_HANDLE_VALUE, а вміст file_data є невизначеним.*/
+    if (INVALID_HANDLE_VALUE == h_file) {
+        cout << "Error in " << directoryPath << endl;
+        return;
     }
-}
-
-string getRange(int value);
-
-void countSizeToRange() {//функція для підрахунку кількості файлів, що належать кожному проміжку
-    for (const auto &file: files) {//проходимося по всіх файлах
-        int size = file.second;//розмір
-        string key = getRange(size); //обраховуємо проміжок якому він належить - це і є ключ.
-        // А далі додаємо у мапу або інкрементуємо значенн лічильника, якщо у цьому проміжку вже хтось був
-        if (!statistic.contains(key)) {
-            statistic.insert(pair(key, 1));
-        } else {
-            auto node = statistic.find(key);
-            int counter = node->second + 1;
-            if (counter > maxCounter) {
-                maxCounter = counter;
+    do {
+        if (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {//перевіряємо чи це папка
+            if (strcmp(file_data.cFileName, ".") && strcmp(file_data.cFileName, "..")) { // Ігноруємо папки "." та ".."
+                string next = path + '\\' + file_data.cFileName;  // створюємо шлях до папки
+                scanAllFilesInDirectory(next); //рекурсивно заходимо в неї
             }
-            node->second = counter;
+        } else {//інакше це файл
+            countFile(file_data);//рахуємо в якому проміжку належить розмір файлу
         }
-    }
+    } while (FindNextFileA(h_file, &file_data) != 0);
+    /* FindNextFileA - Продовжує пошук файлу
+     * Якщо функція виконується успішно, повертається значення відмінне від нуля,
+     * а параметр lpFindFileData містить інформацію про наступний знайдений файл або каталог.
+     * Якщо функція не працює, повертається значення дорівнює нулю,
+     * а вміст lpFindFileData є невизначеним.*/
 }
+
 
 void printResult();
 
 int main() {
     string path = "C:\\Program Files\\Sublime Text 3";
     scanAllFilesInDirectory(path);
-    countSizeToRange();
     printResult();
     return 0;
 }
 
-string rangeToString(int start, int finish) {
-    return to_string(start) + "-" + to_string(finish);
+int dwordToInt(DWORD high, DWORD low) {
+    return (int) (static_cast<__int64>(high) << 32 | low);
 }
 
-void printStarLine(int stars) {
-    for (int i = 0; i < stars; ++i) {
-        cout << "*";
-    }
-    cout << endl;
+string rangeToString(int start, int finish) {
+    return to_string(start) + "-" + to_string(finish);
 }
 
 string getRange(int value) {
@@ -82,8 +92,29 @@ string getRange(int value) {
     return rangeToString(start, finish);
 }
 
+void countSizeToRange(int size) {//функція для підрахунку кількості файлів, що належать кожному проміжку
+    string key = getRange(size); //обраховуємо проміжок якому він належить - це і є ключ.
+    // А далі додаємо у мапу або інкрементуємо значенн лічильника, якщо у цьому проміжку вже хтось був
+    if (!statistic.contains(key)) {
+        statistic.insert(pair(key, 1));
+    } else {
+        auto node = statistic.find(key);
+        int counter = node->second + 1;
+        if (counter > maxCounter) {
+            maxCounter = counter;
+        }
+        node->second = counter;
+    }
+}
+
+void printStarLine(int stars) {
+    for (int i = 0; i < stars; ++i) { cout << "*"; }
+    cout << endl;
+}
+
 void printResult() {
-    double coeff = (double) consoleCapacity / ((double) maxCounter);
+    if (maxCounter == 0) { return; }
+    double coeff = (double) CONSOLE_CAPACITY / ((double) maxCounter);
     for (auto &node: statistic) {
         int size = node.second;
         if (size != 0) {
