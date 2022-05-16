@@ -15,9 +15,10 @@ long maxCounter = 0;//максимальна кількість файлів, щ
 
 int dwordToInt(DWORD high, DWORD low);
 
-void countSizeToRange(int size);
+void countSizeToRange(int size);/*знаходимо проміжок якому належить розмір файлу
+ * та інкрементуємо лічильник проміжку*/
 
-void countFile(WIN32_FIND_DATAA file) {
+void countFile(WIN32_FIND_DATAA file) {//дізнаємося розмір файлу
     int size = dwordToInt(file.nFileSizeHigh, file.nFileSizeLow);
     countSizeToRange(size);
 }
@@ -44,7 +45,8 @@ void scanAllFilesInDirectory(const string &path) {
     }
     do {
         if (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {//перевіряємо чи це папка
-            if (strcmp(file_data.cFileName, ".") && strcmp(file_data.cFileName, "..")) { // Ігноруємо папки "." та ".."
+            if (strcmp(file_data.cFileName, ".") &&
+                strcmp(file_data.cFileName, "..")) { // Пропускаємо папки "." та ".."
                 string next = path + '\\' + file_data.cFileName;  // створюємо шлях до папки
                 scanAllFilesInDirectory(next); //рекурсивно заходимо в неї
             }
@@ -77,7 +79,7 @@ string rangeToString(int start, int finish) {
     return to_string(start) + "-" + to_string(finish);
 }
 
-string getRange(int value) {
+string getRange(int value) {//знаходимо проміжок якому належить даний розмір
     if (value <= interval) {
         return rangeToString(1, interval);
     }
@@ -94,17 +96,17 @@ string getRange(int value) {
 
 void countSizeToRange(int size) {//функція для підрахунку кількості файлів, що належать кожному проміжку
     string key = getRange(size); //обраховуємо проміжок якому він належить - це і є ключ.
-    // А далі додаємо у мапу або інкрементуємо значенн лічильника, якщо у цьому проміжку вже хтось був
+    // А далі додаємо у мапу або інкрементуємо значення лічильника, якщо у цьому проміжку вже хтось був
+    int counter;
     if (!statistic.contains(key)) {
-        statistic.insert(pair(key, 1));
+        counter = 1;
+        statistic.insert(pair(key, counter));
     } else {
         auto node = statistic.find(key);
-        int counter = node->second + 1;
-        if (counter > maxCounter) {
-            maxCounter = counter;
-        }
+        counter = node->second + 1;
         node->second = counter;
     }
+    if (counter > maxCounter) { maxCounter = counter; }
 }
 
 void printStarLine(int stars) {
