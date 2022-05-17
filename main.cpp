@@ -122,7 +122,7 @@ void printResult() {
         int size = node.second;
         if (size != 0) {
             cout << node.first << endl;
-            printStarLine((size * coeff));
+            printStarLine(max((size * coeff), 1.0));
         }
     }
 }
