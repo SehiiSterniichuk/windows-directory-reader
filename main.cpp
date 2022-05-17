@@ -120,9 +120,7 @@ void printResult() {
     double coeff = (double) CONSOLE_CAPACITY / ((double) maxCounter);
     for (auto &node: statistic) {
         int size = node.second;
-        if (size != 0) {
-            cout << node.first << endl;
-            printStarLine(max((size * coeff), 1.0));
-        }
+        cout << node.first << endl;
+        printStarLine(max((size * coeff), 1.0));
     }
 }
